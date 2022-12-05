@@ -1,0 +1,1171 @@
+# diff --git a/.gitignore b/.gitignore
+# index 0ff6359..de89a2f 100644
+# --- a/.gitignore
+# +++ b/.gitignore
+# @@ -19,6 +19,11 @@ wandb
+#  ./*/*/*/*/wandb
+#  ./*/*/*/*/*/wandb
+ 
+# +# ./data/lending_club_loan/README.md b/data/lending_club_loan/
+# +# ./fedml_api/data_preprocessing/NUS_WIDE/
+# +# ./fedml_api/standalone/fedavg/my_model_trainer_classification.py
+# +# ./fedml_core/distributed/communication/mqtt/mqtt_comm_manager.py
+# +# ./fedml_api/standalone/classical_vertical_fl/
+ 
+#  *.txt
+#  *.h5
+# diff --git a/data/lending_club_loan/README.md b/data/lending_club_loan/README.md
+# index b595f61..afbec8d 100644
+# --- a/data/lending_club_loan/README.md
+# +++ b/data/lending_club_loan/README.md
+# @@ -1,2 +1,2 @@
+#  Please manually download "loan.csv" file into this directory.
+# -Download link: https://www.kaggle.com/wordsforthewise/lending-club
+# \ No newline at end of file
+# +`wget --no-check-certificate --no-proxy https://fedml.s3.us-west-1.amazonaws.com/loan.csv`
+# \ No newline at end of file
+diff --git a/fedml_api/data_preprocessing/MNIST/data_loader.py b/fedml_api/data_preprocessing/MNIST/data_loader.py
+index 4a39888..8c9ee7a 100755
+--- a/fedml_api/data_preprocessing/MNIST/data_loader.py
++++ b/fedml_api/data_preprocessing/MNIST/data_loader.py
+@@ -85,8 +85,8 @@ def load_partition_data_mnist_by_device_id(batch_size,
+ 
+ 
+ def load_partition_data_mnist(batch_size,
+-                              train_path="./../../../data/MNIST/train",
+-                              test_path="./../../../data/MNIST/test"):
++                              train_path="./data/MNIST/train",
++                              test_path="./data/MNIST/test"):
+     users, groups, train_data, test_data = read_data(train_path, test_path)
+ 
+     if len(groups) == 0:
+# diff --git a/fedml_api/data_preprocessing/NUS_WIDE/nus_wide_dataset.py b/fedml_api/data_preprocessing/NUS_WIDE/nus_wide_dataset.py
+# index 3d8129c..fd81da2 100644
+# --- a/fedml_api/data_preprocessing/NUS_WIDE/nus_wide_dataset.py
+# +++ b/fedml_api/data_preprocessing/NUS_WIDE/nus_wide_dataset.py
+# @@ -2,7 +2,8 @@ import os
+ 
+#  import numpy as np
+#  import pandas as pd
+# -from sklearn.preprocessing.data import StandardScaler
+# +# from sklearn.preprocessing.data import StandardScaler
+# +from sklearn.preprocessing import StandardScaler
+ 
+ 
+#  def get_top_k_labels(data_dir, top_k=5):
+diff --git a/fedml_api/data_preprocessing/shakespeare/data_loader.py b/fedml_api/data_preprocessing/shakespeare/data_loader.py
+index 5965ce7..36ae7b8 100644
+--- a/fedml_api/data_preprocessing/shakespeare/data_loader.py
++++ b/fedml_api/data_preprocessing/shakespeare/data_loader.py
+@@ -88,8 +88,8 @@ def batch_data(data, batch_size):
+ 
+ 
+ def load_partition_data_shakespeare(batch_size):
+-    train_path = "../../../data/shakespeare/train"
+-    test_path = "../../../data/shakespeare/test"
++    train_path = "./data/shakespeare/train"
++    test_path = "./data/shakespeare/test"
+     users, groups, train_data, test_data = read_data(train_path, test_path)
+ 
+     if len(groups) == 0:
+diff --git a/fedml_api/model/finance/vfl_models_standalone.py b/fedml_api/model/finance/vfl_models_standalone.py
+index 8306948..42970ba 100644
+--- a/fedml_api/model/finance/vfl_models_standalone.py
++++ b/fedml_api/model/finance/vfl_models_standalone.py
+@@ -4,13 +4,13 @@ import torch.optim as optim
+ 
+ 
+ class DenseModel(nn.Module):
+-    def __init__(self, input_dim, output_dim, learning_rate=0.01, bias=True):
++    def __init__(self, input_dim, output_dim, learning_rate, optim_param, bias=True):
+         super(DenseModel, self).__init__()
+         self.classifier = nn.Sequential(
+             nn.Linear(in_features=input_dim, out_features=output_dim, bias=bias),
+         )
+         self.is_debug = False
+-        self.optimizer = optim.SGD(self.parameters(), momentum=0.9, weight_decay=0.01, lr=learning_rate)
++        self.optimizer = optim.SGD(self.parameters(), momentum=optim_param['momentum'], weight_decay=optim_param['weight_decay'], dampening=optim_param['dampening'], nesterov=optim_param['nesterov'], lr=learning_rate)
+ 
+     def forward(self, x):
+         if self.is_debug: print("[DEBUG] DenseModel.forward")
+@@ -34,7 +34,7 @@ class DenseModel(nn.Module):
+ 
+ 
+ class LocalModel(nn.Module):
+-    def __init__(self, input_dim, output_dim, learning_rate):
++    def __init__(self, input_dim, output_dim, learning_rate, optim_param):
+         super(LocalModel, self).__init__()
+         self.classifier = nn.Sequential(
+             nn.Linear(in_features=input_dim, out_features=output_dim),
+@@ -43,7 +43,7 @@ class LocalModel(nn.Module):
+         self.output_dim = output_dim
+         self.is_debug = False
+         self.learning_rate = learning_rate
+-        self.optimizer = optim.SGD(self.parameters(), momentum=0.9, weight_decay=0.01, lr=learning_rate)
++        self.optimizer = optim.SGD(self.parameters(), momentum=optim_param['momentum'], weight_decay=optim_param['weight_decay'], dampening=optim_param['dampening'], nesterov=optim_param['nesterov'], lr=learning_rate)
+ 
+     def forward(self, x):
+         if self.is_debug: print("[DEBUG] DenseModel.forward")
+diff --git a/fedml_api/model/linear/lr.py b/fedml_api/model/linear/lr.py
+index 06f6402..3f7ef44 100644
+--- a/fedml_api/model/linear/lr.py
++++ b/fedml_api/model/linear/lr.py
+@@ -9,3 +9,11 @@ class LogisticRegression(torch.nn.Module):
+     def forward(self, x):
+         outputs = torch.sigmoid(self.linear(x))
+         return outputs
++
++class LinearRegression(torch.nn.Module):
++    def __init__(self, input_dim, output_dim):
++        super(LinearRegression, self).__init__()
++        self.linear = torch.nn.Linear(input_dim, output_dim)
++
++    def forward(self, x):
++        return self.linear(x)
+# diff --git a/fedml_api/standalone/classical_vertical_fl/party_models.py b/fedml_api/standalone/classical_vertical_fl/party_models.py
+# index a47f39a..12e5e4a 100644
+# --- a/fedml_api/standalone/classical_vertical_fl/party_models.py
+# +++ b/fedml_api/standalone/classical_vertical_fl/party_models.py
+# @@ -3,6 +3,7 @@ import torch
+#  import torch.nn as nn
+ 
+#  from fedml_api.model.finance.vfl_models_standalone import DenseModel
+# +import flbenchmark.logging
+ 
+ 
+#  def sigmoid(x):
+# @@ -18,7 +19,7 @@ class VFLGuestModel(object):
+#          self.is_debug = False
+ 
+#          self.classifier_criterion = nn.BCEWithLogitsLoss()
+# -        self.dense_model = DenseModel(input_dim=self.feature_dim, output_dim=1, bias=True)
+# +        # self.dense_model = DenseModel(input_dim=self.feature_dim, output_dim=1, bias=True)
+#          self.parties_grad_component_list = []
+#          self.current_global_step = None
+#          self.X = None
+# @@ -46,9 +47,11 @@ class VFLGuestModel(object):
+#              U = U + comp
+#          return sigmoid(np.sum(U, axis=1))
+ 
+# -    def receive_components(self, component_list):
+# -        for party_component in component_list:
+# -            self.parties_grad_component_list.append(party_component)
+# +    def receive_components(self, component_list, logger):
+# +        with logger.communication(target_id = 0) as c:
+# +            for party_component in component_list:
+# +                c.report_metric('byte', party_component.size * party_component.itemsize)
+# +                self.parties_grad_component_list.append(party_component)
+ 
+#      def fit(self):
+#          self._fit(self.X, self.y)
+# @@ -86,7 +89,7 @@ class VFLHostModel(object):
+#          self.feature_dim = local_model.get_output_dim()
+#          self.is_debug = False
+ 
+# -        self.dense_model = DenseModel(input_dim=self.feature_dim, output_dim=1, bias=False)
+# +        # self.dense_model = DenseModel(input_dim=self.feature_dim, output_dim=1, bias=False)
+#          self.common_grad = None
+#          self.partial_common_grad = None
+#          self.current_global_step = None
+# @@ -99,21 +102,37 @@ class VFLHostModel(object):
+#          self.X = X
+#          self.current_global_step = global_step
+ 
+# -    def _forward_computation(self, X):
+# -        self.A_Z = self.localModel.forward(X)
+# -        A_U = self.dense_model.forward(self.A_Z)
+# +    def _forward_computation(self, X, logger):
+# +        if logger == None:
+# +            self.A_Z = self.localModel.forward(X)
+# +            A_U = self.dense_model.forward(self.A_Z)
+# +        else:
+# +            with logger.computation() as c:
+# +                self.A_Z = self.localModel.forward(X)
+# +                A_U = self.dense_model.forward(self.A_Z)
+#          return A_U
+ 
+#      def _fit(self, X, y):
+#          back_grad = self.dense_model.backward(self.A_Z, self.common_grad)
+#          self.localModel.backward(X, back_grad)
+ 
+# -    def receive_gradients(self, gradients):
+# -        self.common_grad = gradients
+# -        self._fit(self.X, None)
+# -
+# -    def send_components(self):
+# -        return self._forward_computation(self.X)
+# +    def receive_gradients(self, gradients, logger0, logger1):
+# +        # with flbenchmark.logging.BasicLogger(id=0, agent_type='client') as logger0:
+# +        #     with logger0.communication(target_id = 1) as c:
+# +        #         c.report_metric('byte', gradients.size * gradients.itemsize)
+# +        #         self.common_grad = gradients
+# +        # with flbenchmark.logging.BasicLogger(id=1, agent_type='client') as logger1:
+# +        #     with logger1.computation() as c:
+# +        #         self._fit(self.X, None)
+# +        with logger0.communication(target_id = 1) as c:
+# +            self.common_grad = gradients
+# +            c.report_metric('byte', gradients.size * gradients.itemsize)
+# +        with logger1.computation() as c:
+# +            self._fit(self.X, None)
+# +        
+# +
+# +    def send_components(self, logger):
+# +        return self._forward_computation(self.X, logger)
+ 
+#      def predict(self, X):
+# -        return self._forward_computation(X)
+# +        return self._forward_computation(X, None)
+# diff --git a/fedml_api/standalone/classical_vertical_fl/vfl.py b/fedml_api/standalone/classical_vertical_fl/vfl.py
+# index 801b664..4b5a3a8 100644
+# --- a/fedml_api/standalone/classical_vertical_fl/vfl.py
+# +++ b/fedml_api/standalone/classical_vertical_fl/vfl.py
+# @@ -1,3 +1,5 @@
+# +import flbenchmark.logging
+# +
+#  class VerticalMultiplePartyLogisticRegressionFederatedLearning(object):
+ 
+#      def __init__(self, party_A, main_party_id="_main"):
+# @@ -8,6 +10,10 @@ class VerticalMultiplePartyLogisticRegressionFederatedLearning(object):
+#          # the party dictionary stores other parties that have no labels
+#          self.party_dict = dict()
+#          self.is_debug = False
+# +    
+# +    def set_logger(self, logger0, logger1):
+# +        self.logger0 = logger0
+# +        self.logger1 = logger1
+ 
+#      def set_debug(self, is_debug):
+#          self.is_debug = is_debug
+# @@ -32,20 +38,28 @@ class VerticalMultiplePartyLogisticRegressionFederatedLearning(object):
+#          if self.is_debug: print("==> Guest receive intermediate computing results from hosts")
+#          comp_list = []
+#          for party in self.party_dict.values():
+# -            logits = party.send_components()
+# +            logits = party.send_components(self.logger1)
+#              comp_list.append(logits)
+# -        self.party_a.receive_components(component_list=comp_list)
+# +        self.party_a.receive_components(component_list=comp_list, logger = self.logger1)
+# +
+# +
+ 
+#          if self.is_debug: print("==> Guest train and computes loss")
+# -        self.party_a.fit()
+# -        loss = self.party_a.get_loss()
+# +        with self.logger0.computation() as c:
+# +            self.party_a.fit()
+# +            loss = self.party_a.get_loss()
+# +            c.report_metric('loss', loss)
+# +
+# +
+ 
+#          if self.is_debug: print("==> Guest sends out common grad")
+#          grad_result = self.party_a.send_gradients()
+ 
+# +
+# +
+#          if self.is_debug: print("==> Hosts receive common grad from guest and perform training")
+#          for party in self.party_dict.values():
+# -            party.receive_gradients(grad_result)
+# +            party.receive_gradients(grad_result, self.logger0, self.logger1)
+ 
+#          return loss
+ 
+# diff --git a/fedml_api/standalone/classical_vertical_fl/vfl_fixture.py b/fedml_api/standalone/classical_vertical_fl/vfl_fixture.py
+# index fe58dd1..0029a2f 100644
+# --- a/fedml_api/standalone/classical_vertical_fl/vfl_fixture.py
+# +++ b/fedml_api/standalone/classical_vertical_fl/vfl_fixture.py
+# @@ -1,6 +1,9 @@
+#  import numpy as np
+#  from sklearn.metrics import precision_recall_fscore_support
+#  from sklearn.metrics import roc_auc_score, accuracy_score
+# +# import wandb
+# +import flbenchmark.logging
+# +from time import sleep
+ 
+#  from fedml_api.standalone.classical_vertical_fl.vfl import VerticalMultiplePartyLogisticRegressionFederatedLearning
+ 
+# @@ -11,6 +14,7 @@ def compute_correct_prediction(*, y_targets, y_prob_preds, threshold=0.5):
+#      pred_neg_count = 0
+#      correct_count = 0
+#      for y_prob, y_t in zip(y_prob_preds, y_targets):
+# +        # print(y_prob,y_t)
+#          if y_prob <= threshold:
+#              pred_neg_count += 1
+#              y_hat_lbl = 0
+# @@ -30,7 +34,6 @@ class FederatedLearningFixture(object):
+#          self.federated_learning = federated_learning
+ 
+#      def fit(self, train_data, test_data, epochs=50, batch_size=-1):
+# -
+#          main_party_id = self.federated_learning.get_main_party_id()
+#          Xa_train = train_data[main_party_id]["X"]
+#          y_train = train_data[main_party_id]["Y"]
+# @@ -49,13 +52,24 @@ class FederatedLearningFixture(object):
+#          print("number of batches:", n_batches)
+ 
+#          global_step = -1
+# -        recording_period = 30
+# +        recording_period = n_batches
+#          recording_step = -1
+#          threshold = 0.5
+ 
+#          loss_list = []
+#          # running_time_list = []
+# +
+# +        logger0 = flbenchmark.logging.BasicLogger(id=0, agent_type='client')
+# +        logger1 = flbenchmark.logging.BasicLogger(id=1, agent_type='client')
+# +        self.federated_learning.set_logger(logger0, logger1)
+# +
+# +        logger0.training_start()
+# +        logger1.training_start()
+# +        ROUND = 0
+#          for ep in range(epochs):
+# +            logger0.training_round_start()
+# +            logger1.training_round_start()
+# +
+#              for batch_idx in range(n_batches):
+#                  global_step += 1
+ 
+# @@ -67,25 +81,51 @@ class FederatedLearningFixture(object):
+#                  party_X_train_batch_dict = dict()
+#                  for party_id, party_X in train_data["party_list"].items():
+#                      party_X_train_batch_dict[party_id] = party_X[
+# -                                                         batch_idx * batch_size: batch_idx * batch_size + batch_size]
+# +                                                        batch_idx * batch_size: batch_idx * batch_size + batch_size]
+ 
+#                  loss = self.federated_learning.fit(Xa_batch, Y_batch,
+# -                                                                 party_X_train_batch_dict,
+# -                                                                 global_step)
+# +                                                                party_X_train_batch_dict,
+# +                                                                global_step)
+#                  loss_list.append(loss)
+#                  if (global_step + 1) % recording_period == 0:
+# -                    recording_step += 1
+# -                    ave_loss = np.mean(loss_list)
+# -                    loss_list = list()
+# -                    party_X_test_dict = dict()
+# -                    for party_id, party_X in test_data["party_list"].items():
+# -                        party_X_test_dict[party_id] = party_X
+# -                    y_prob_preds = self.federated_learning.predict(Xa_test, party_X_test_dict)
+# -                    y_hat_lbls, statistics = compute_correct_prediction(y_targets=y_test,
+# -                                                                        y_prob_preds=y_prob_preds,
+# -                                                                        threshold=threshold)
+# -                    acc = accuracy_score(y_test, y_hat_lbls)
+# -                    auc = roc_auc_score(y_test, y_prob_preds)
+# -                    print("--- epoch: {0}, batch: {1}, loss: {2}, acc: {3}, auc: {4}"
+# -                          .format(ep, batch_idx, ave_loss, acc, auc))
+# -                    print("---", precision_recall_fscore_support(y_test, y_hat_lbls, average="macro", warn_for=tuple()))
+# +                    if ep == epochs - 1:
+# +                        break
+# +                    else:
+# +                        recording_step += 1
+# +                        ave_loss = np.mean(loss_list)
+# +                        loss_list = list()
+# +                        party_X_test_dict = dict()
+# +                        for party_id, party_X in test_data["party_list"].items():
+# +                            party_X_test_dict[party_id] = party_X
+# +                        y_prob_preds = self.federated_learning.predict(Xa_test, party_X_test_dict)
+# +                        y_hat_lbls, statistics = compute_correct_prediction(y_targets=y_test,
+# +                                                                            y_prob_preds=y_prob_preds,
+# +                                                                            threshold=threshold)
+# +                        acc = accuracy_score(y_test, y_hat_lbls)
+# +                        # auc = roc_auc_score(y_test, y_prob_preds)
+# +                        # print("--- epoch: {0}, batch: {1}, loss: {2}, acc: {3}, auc: {4}"
+# +                        #       .format(ep, batch_idx, ave_loss, acc, auc))
+# +                        ROUND += 1
+# +                        # wandb.log({"Test/Acc": acc, "round": ROUND})
+# +                        # wandb.log({"Test/AVE_Loss": ave_loss, "round": ROUND})
+# +                        print({"Test/Acc": acc, "round": ROUND})
+# +                        print({"Test/AVE_Loss": ave_loss, "round": ROUND})
+# +            
+# +            logger0.training_round_end()
+# +            logger1.training_round_end()
+# +        logger1.training_end()
+# +        logger0.training_end()
+# +
+# +        with logger0.model_evaluation() as e:
+# +            loss_list = list()
+# +            party_X_test_dict = dict()
+# +            for party_id, party_X in test_data["party_list"].items():
+# +                party_X_test_dict[party_id] = party_X
+# +            y_prob_preds = self.federated_learning.predict(Xa_test, party_X_test_dict)
+# +            y_hat_lbls, statistics = compute_correct_prediction(y_targets=y_test,
+# +                                                                y_prob_preds=y_prob_preds,
+# +                                                                threshold=threshold)
+# +            acc = accuracy_score(y_test, y_hat_lbls)
+# +            e.report_metric('auc', acc)
+# +        logger0.end()
+# +        logger1.end()
+# \ No newline at end of file
+diff --git a/fedml_api/standalone/fedavg/client.py b/fedml_api/standalone/fedavg/client.py
+index 5e274f7..25f7daa 100644
+--- a/fedml_api/standalone/fedavg/client.py
++++ b/fedml_api/standalone/fedavg/client.py
+@@ -1,4 +1,12 @@
+ import logging
++from time import time
++import flbenchmark.logging
++
++def getbyte(w):
++    ret = 0
++    for key, value in w.items():
++        ret += value.numel() * value.element_size()
++    return ret
+ 
+ 
+ class Client:
+@@ -14,6 +22,10 @@ class Client:
+         self.args = args
+         self.device = device
+         self.model_trainer = model_trainer
++        self.time = time()
++
++        self.logger = flbenchmark.logging.BasicLogger(id=client_idx + 1, agent_type='client')
++        print(client_idx)
+ 
+     def update_local_dataset(self, client_idx, local_training_data, local_test_data, local_sample_number):
+         self.client_idx = client_idx
+@@ -26,8 +38,11 @@ class Client:
+ 
+     def train(self, w_global):
+         self.model_trainer.set_model_params(w_global)
+-        self.model_trainer.train(self.local_training_data, self.device, self.args)
++        self.model_trainer.train(self.local_training_data, self.device, self.args, self.logger)
+         weights = self.model_trainer.get_model_params()
++        with self.logger.communication(target_id=0) as c:
++            c.report_metric('byte', getbyte(weights)) 
++        self.time = time()
+         return weights
+ 
+     def local_test(self, b_use_test_dataset):
+diff --git a/fedml_api/standalone/fedavg/fedavg_api.py b/fedml_api/standalone/fedavg/fedavg_api.py
+index 758915e..b39dff8 100644
+--- a/fedml_api/standalone/fedavg/fedavg_api.py
++++ b/fedml_api/standalone/fedavg/fedavg_api.py
+@@ -4,13 +4,26 @@ import random
+ 
+ import numpy as np
+ import torch
+-import wandb
++# import wandb
++from time import time
++from time import sleep
++import flbenchmark.logging
+ 
+ from fedml_api.standalone.fedavg.client import Client
++import json
++from sklearn.metrics import roc_auc_score
+ 
+ 
++AUC = ['breast_horizontal', 'default_credit_horizontal', 'give_credit_horizontal',
++       'breast_vertical', 'default_credit_vertical', 'give_credit_vertical', ]
++def getbyte(w):
++    ret = 0
++    for key, value in w.items():
++        ret += value.numel() * value.element_size()
++    return ret
++
+ class FedAvgAPI(object):
+-    def __init__(self, dataset, device, args, model_trainer):
++    def __init__(self, dataset, device, args, model_trainer, is_regression):
+         self.device = device
+         self.args = args
+         [train_data_num, test_data_num, train_data_global, test_data_global,
+@@ -26,6 +39,8 @@ class FedAvgAPI(object):
+         self.train_data_local_dict = train_data_local_dict
+         self.test_data_local_dict = test_data_local_dict
+ 
++        self.is_regression = is_regression
++
+         self.model_trainer = model_trainer
+         self._setup_clients(train_data_local_num_dict, train_data_local_dict, test_data_local_dict, model_trainer)
+ 
+@@ -38,47 +53,102 @@ class FedAvgAPI(object):
+         logging.info("############setup_clients (END)#############")
+ 
+     def train(self):
+-        w_global = self.model_trainer.get_model_params()
+-        for round_idx in range(self.args.comm_round):
+-
+-            logging.info("################Communication round : {}".format(round_idx))
+-
+-            w_locals = []
++        communication_time, communication_bytes = 0, 0
++        report_my = 0
++        config = json.load(open('config.json', 'r'))
+ 
+-            """
+-            for scalability: following the original FedAvg algorithm, we uniformly sample a fraction of clients in each round.
+-            Instead of changing the 'Client' instances, our implementation keeps the 'Client' instances and then updates their local dataset 
+-            """
+-            client_indexes = self._client_sampling(round_idx, self.args.client_num_in_total,
+-                                                   self.args.client_num_per_round)
+-            logging.info("client_indexes = " + str(client_indexes))
+-
+-            for idx, client in enumerate(self.client_list):
+-                # update dataset
+-                client_idx = client_indexes[idx]
+-                client.update_local_dataset(client_idx, self.train_data_local_dict[client_idx],
+-                                            self.test_data_local_dict[client_idx],
+-                                            self.train_data_local_num_dict[client_idx])
+-
+-                # train on new dataset
+-                w = client.train(copy.deepcopy(w_global))
+-                # self.logger.info("local weights = " + str(w))
+-                w_locals.append((client.get_sample_number(), copy.deepcopy(w)))
+-
+-            # update global weights
+-            w_global = self._aggregate(w_locals)
+-            self.model_trainer.set_model_params(w_global)
+-
+-            # test results
+-            # at last round
+-            if round_idx == self.args.comm_round - 1:
+-                self._local_test_on_all_clients(round_idx)
+-            # per {frequency_of_the_test} round
+-            elif round_idx % self.args.frequency_of_the_test == 0:
+-                if self.args.dataset.startswith("stackoverflow"):
+-                    self._local_test_on_validation_set(round_idx)
++        w_global = self.model_trainer.get_model_params()
++        with flbenchmark.logging.BasicLogger(id=0, agent_type='aggregator') as logger:
++            with logger.training():
++                for idx, client in enumerate(self.client_list):
++                    # client.logger.start()
++                    client.logger.training_start()
++
++                for round_idx in range(self.args.comm_round):
++                    with logger.training_round() as tr:
++                        tr.report_metric('client_num', config["training_param"]["client_per_round"])
++                        logging.info("################Communication round : {}".format(round_idx))
++                        
++                        for idx, client in enumerate(self.client_list):
++                            # client.logger.start()
++                            client.logger.training_round_start()
++
++                        w_locals = []
++
++                        """
++                        for scalability: following the original FedAvg algorithm, we uniformly sample a fraction of clients in each round.
++                        Instead of changing the 'Client' instances, our implementation keeps the 'Client' instances and then updates their local dataset 
++                        """
++                        client_indexes = self._client_sampling(round_idx, self.args.client_num_in_total,
++                                                            self.args.client_num_per_round)
++                        logging.info("client_indexes = " + str(client_indexes))
++
++                        for idx, client in enumerate(self.client_list):
++                            # update dataset
++                            client_idx = client_indexes[idx]
++                            client.update_local_dataset(client_idx, self.train_data_local_dict[client_idx],
++                                                        self.test_data_local_dict[client_idx],
++                                                        self.train_data_local_num_dict[client_idx])
++
++
++
++                            # train on new dataset
++                            w = client.train(copy.deepcopy(w_global))
++                            communication_bytes += getbyte(w)
++                            # self.logger.info("local weights = " + str(w))
++                            w_locals.append((client.get_sample_number(), copy.deepcopy(w)))
++                            
++                            # client back to server
++                            communication_time += time() - client.time
++
++                        # update global weights
++                        with logger.computation() as c:
++                            w_global = self._aggregate(w_locals)
++
++                        for idx, client in enumerate(self.client_list):
++                            with logger.communication(target_id=idx + 1) as c:
++                                c.report_metric('byte', getbyte(w_global))
++
++                        timea = time()
++                        self.model_trainer.set_model_params(w_global)
++                        # server to client time
++                        communication_time += time() - timea
++
++                        # test results
++                        # at last round
++                        if round_idx == self.args.comm_round - 1:
++                            btime = time()
++                            report_my = self._local_test_on_all_clients(round_idx)
++                            finaltime = time() - btime
++                        # per {frequency_of_the_test} round
++                        elif round_idx % self.args.frequency_of_the_test == 0:
++                            pass # if self.args.dataset.startswith("stackoverflow"):
++                                # self._local_test_on_validation_set(round_idx)
++                            # else:
++                                # self._local_test_on_all_clients(round_idx)
++                        
++                        for idx, client in enumerate(self.client_list):
++                            # client.logger.start()
++                            client.logger.training_round_end()
++
++                for idx, client in enumerate(self.client_list):
++                    client.logger.end()
++                # print("Total communication time is {}".format(communication_time))
++                # print("Total communication cost is {}".format(communication_bytes * 2))
++                # print("Total communication round is {}".format(self.args.comm_round))
++                for idx, client in enumerate(self.client_list):
++                    # client.logger.start()
++                    client.logger.training_end()
++
++            with logger.model_evaluation() as e:
++                sleep(finaltime)
++                if self.is_regression:
++                    e.report_metric('mse', report_my)
++                elif self.args.dataset in AUC:
++                    # e.report_metric('accuracy', report_my[1] * 100)
++                    e.report_metric('auc', report_my)
+                 else:
+-                    self._local_test_on_all_clients(round_idx)
++                    e.report_metric('accuracy', report_my)
+ 
+     def _client_sampling(self, round_idx, client_num_in_total, client_num_per_round):
+         if client_num_in_total == client_num_per_round:
+@@ -130,6 +200,8 @@ class FedAvgAPI(object):
+             'losses': []
+         }
+ 
++        predict_my, target_my = None, None
++
+         client = self.client_list[0]
+ 
+         for client_idx in range(self.args.client_num_in_total):
+@@ -145,39 +217,49 @@ class FedAvgAPI(object):
+             # train data
+             train_local_metrics = client.local_test(False)
+             train_metrics['num_samples'].append(copy.deepcopy(train_local_metrics['test_total']))
+-            train_metrics['num_correct'].append(copy.deepcopy(train_local_metrics['test_correct']))
++            if not self.is_regression:
++                train_metrics['num_correct'].append(copy.deepcopy(train_local_metrics['test_correct']))
+             train_metrics['losses'].append(copy.deepcopy(train_local_metrics['test_loss']))
+ 
+             # test data
+             test_local_metrics = client.local_test(True)
+             test_metrics['num_samples'].append(copy.deepcopy(test_local_metrics['test_total']))
+-            test_metrics['num_correct'].append(copy.deepcopy(test_local_metrics['test_correct']))
++            if not self.is_regression:
++                test_metrics['num_correct'].append(copy.deepcopy(test_local_metrics['test_correct']))
+             test_metrics['losses'].append(copy.deepcopy(test_local_metrics['test_loss']))
+-
+-            """
+-            Note: CI environment is CPU-based computing. 
+-            The training speed for RNN training is to slow in this setting, so we only test a client to make sure there is no programming error.
+-            """
+-            if self.args.ci == 1:
+-                break
++            
++            if self.args.dataset in AUC:
++                if predict_my == None:
++                    predict_my = test_local_metrics['predict']
++                else:
++                    predict_my = torch.cat((predict_my, test_local_metrics['predict']))
++                if target_my == None:
++                    target_my = test_local_metrics['targety']
++                else:
++                    target_my = torch.cat((target_my, test_local_metrics['targety']))
++                # predict_my += test_local_metrics['predict']
++                # target_my += test_local_metrics['targety']
+ 
+         # test on training dataset
+-        train_acc = sum(train_metrics['num_correct']) / sum(train_metrics['num_samples'])
++        train_acc = 0
++        if not self.is_regression:
++            train_acc = sum(train_metrics['num_correct']) / sum(train_metrics['num_samples'])
++            
+         train_loss = sum(train_metrics['losses']) / sum(train_metrics['num_samples'])
+ 
+         # test on test dataset
+-        test_acc = sum(test_metrics['num_correct']) / sum(test_metrics['num_samples'])
++        test_acc = 0
++        if not self.is_regression:
++            test_acc = sum(test_metrics['num_correct']) / sum(test_metrics['num_samples'])
++         
+         test_loss = sum(test_metrics['losses']) / sum(test_metrics['num_samples'])
+ 
+-        stats = {'training_acc': train_acc, 'training_loss': train_loss}
+-        wandb.log({"Train/Acc": train_acc, "round": round_idx})
+-        wandb.log({"Train/Loss": train_loss, "round": round_idx})
+-        logging.info(stats)
+-
+-        stats = {'test_acc': test_acc, 'test_loss': test_loss}
+-        wandb.log({"Test/Acc": test_acc, "round": round_idx})
+-        wandb.log({"Test/Loss": test_loss, "round": round_idx})
+-        logging.info(stats)
++        if self.is_regression:
++            return test_loss
++        elif self.args.dataset not in AUC:
++            return test_acc
++        else:
++            return roc_auc_score(target_my.cpu(), predict_my.cpu())
+ 
+     def _local_test_on_validation_set(self, round_idx):
+ 
+@@ -195,18 +277,18 @@ class FedAvgAPI(object):
+             test_acc = test_metrics['test_correct'] / test_metrics['test_total']
+             test_loss = test_metrics['test_loss'] / test_metrics['test_total']
+             stats = {'test_acc': test_acc, 'test_loss': test_loss}
+-            wandb.log({"Test/Acc": test_acc, "round": round_idx})
+-            wandb.log({"Test/Loss": test_loss, "round": round_idx})
++            # wandb.log({"Test/Acc": test_acc, "round": round_idx})
++            # wandb.log({"Test/Loss": test_loss, "round": round_idx})
+         elif self.args.dataset == "stackoverflow_lr":
+             test_acc = test_metrics['test_correct'] / test_metrics['test_total']
+             test_pre = test_metrics['test_precision'] / test_metrics['test_total']
+             test_rec = test_metrics['test_recall'] / test_metrics['test_total']
+             test_loss = test_metrics['test_loss'] / test_metrics['test_total']
+             stats = {'test_acc': test_acc, 'test_pre': test_pre, 'test_rec': test_rec, 'test_loss': test_loss}
+-            wandb.log({"Test/Acc": test_acc, "round": round_idx})
+-            wandb.log({"Test/Pre": test_pre, "round": round_idx})
+-            wandb.log({"Test/Rec": test_rec, "round": round_idx})
+-            wandb.log({"Test/Loss": test_loss, "round": round_idx})
++            # wandb.log({"Test/Acc": test_acc, "round": round_idx})
++            # wandb.log({"Test/Pre": test_pre, "round": round_idx})
++            # wandb.log({"Test/Rec": test_rec, "round": round_idx})
++            # wandb.log({"Test/Loss": test_loss, "round": round_idx})
+         else:
+             raise Exception("Unknown format to log metrics for dataset {}!" % self.args.dataset)
+ 
+# diff --git a/fedml_api/standalone/fedavg/my_model_trainer_classification.py b/fedml_api/standalone/fedavg/my_model_trainer_classification.py
+# index 6752f64..944c5a1 100644
+# --- a/fedml_api/standalone/fedavg/my_model_trainer_classification.py
+# +++ b/fedml_api/standalone/fedavg/my_model_trainer_classification.py
+# @@ -16,7 +16,7 @@ class MyModelTrainer(ModelTrainer):
+#      def set_model_params(self, model_parameters):
+#          self.model.load_state_dict(model_parameters)
+ 
+# -    def train(self, train_data, device, args):
+# +    def train(self, train_data, device, args, logger):
+#          model = self.model
+ 
+#          model.to(device)
+# @@ -24,33 +24,37 @@ class MyModelTrainer(ModelTrainer):
+ 
+#          # train and update
+#          criterion = nn.CrossEntropyLoss().to(device)
+# +        optim_param = args.optim_param
+#          if args.client_optimizer == "sgd":
+# -            optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, self.model.parameters()), lr=args.lr)
+# +            optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, self.model.parameters()), lr=args.lr, momentum=optim_param['momentum'], weight_decay=optim_param['weight_decay'], dampening=optim_param['dampening'], nesterov=optim_param['nesterov'])
+#          else:
+#              optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()), lr=args.lr,
+#                                           weight_decay=args.wd, amsgrad=True)
+ 
+#          epoch_loss = []
+#          for epoch in range(args.epochs):
+# -            batch_loss = []
+# -            for batch_idx, (x, labels) in enumerate(train_data):
+# -                x, labels = x.to(device), labels.to(device)
+# -                model.zero_grad()
+# -                log_probs = model(x)
+# -                loss = criterion(log_probs, labels)
+# -                loss.backward()
+# -
+# -                # Uncommet this following line to avoid nan loss
+# -                # torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+# -
+# -                optimizer.step()
+# -                # logging.info('Update Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+# -                #     epoch, (batch_idx + 1) * args.batch_size, len(train_data) * args.batch_size,
+# -                #            100. * (batch_idx + 1) / len(train_data), loss.item()))
+# -                batch_loss.append(loss.item())
+# -            epoch_loss.append(sum(batch_loss) / len(batch_loss))
+# -            logging.info('Client Index = {}\tEpoch: {}\tLoss: {:.6f}'.format(
+# -                self.id, epoch, sum(epoch_loss) / len(epoch_loss)))
+# +            with logger.computation() as c:
+# +                batch_loss = []
+# +                for batch_idx, (x, labels) in enumerate(train_data):
+# +                    x, labels = x.to(device), labels.to(device)
+# +                    model.zero_grad()
+# +                    log_probs = model(x)
+# +                    loss = criterion(log_probs, labels)
+# +                    loss.backward()
+# +
+# +                    # Uncommet this following line to avoid nan loss
+# +                    # torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+# +
+# +                    optimizer.step()
+# +                    # logging.info('Update Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+# +                    #     epoch, (batch_idx + 1) * args.batch_size, len(train_data) * args.batch_size,
+# +                    #            100. * (batch_idx + 1) / len(train_data), loss.item()))
+# +                    batch_loss.append(loss.item())
+# +                epoch_loss.append(sum(batch_loss) / len(batch_loss))
+# +                # logging.info('Client Index = {}\tEpoch: {}\tLoss: {:.6f}'.format(
+# +                #     self.id, epoch, sum(epoch_loss) / len(epoch_loss)))
+# +                c.report_metric('loss',sum(epoch_loss) / len(epoch_loss) )
+# +                
+ 
+#      def test(self, test_data, device, args):
+#          model = self.model
+# @@ -61,7 +65,9 @@ class MyModelTrainer(ModelTrainer):
+#          metrics = {
+#              'test_correct': 0,
+#              'test_loss': 0,
+# -            'test_total': 0
+# +            'test_total': 0,
+# +            'predict': None,
+# +            'targety': None
+#          }
+ 
+#          criterion = nn.CrossEntropyLoss().to(device)
+# @@ -79,6 +85,15 @@ class MyModelTrainer(ModelTrainer):
+#                  metrics['test_correct'] += correct.item()
+#                  metrics['test_loss'] += loss.item() * target.size(0)
+#                  metrics['test_total'] += target.size(0)
+# +                if metrics['predict'] == None:
+# +                    metrics['predict'] = pred[:,-1].reshape(-1)
+# +                else:
+# +                    metrics['predict'] = torch.cat((metrics['predict'], pred[:,-1].reshape(-1)))
+# +                
+# +                if metrics['targety'] == None:
+# +                    metrics['targety'] = target.reshape(-1)
+# +                else:
+# +                    metrics['targety'] = torch.cat((metrics['targety'], target.reshape(-1)))                   
+#          return metrics
+ 
+#      def test_on_the_server(self, train_data_local_dict, test_data_local_dict, device, args=None) -> bool:
+diff --git a/fedml_api/standalone/hierarchical_fl/group.py b/fedml_api/standalone/hierarchical_fl/group.py
+index de2abdb..6b0eaf0 100644
+--- a/fedml_api/standalone/hierarchical_fl/group.py
++++ b/fedml_api/standalone/hierarchical_fl/group.py
+@@ -1,7 +1,9 @@
+ import logging
+ 
+-from fedml_api.standalone.hierarchical_fl.client import Client
+-from fedml_api.standalone.fedavg.fedavg_trainer import FedAvgTrainer
++# from fedml_api.standalone.hierarchical_fl.client import Client
++# from fedml_api.standalone.fedavg.fedavg_trainer import FedAvgTrainer
++from ..hierarchical_fl.client import Client
++from ..fedavg.fedavg_trainer import FedAvgTrainer
+ 
+ class Group(FedAvgTrainer):
+ 
+# diff --git a/fedml_core/distributed/communication/mqtt/mqtt_comm_manager.py b/fedml_core/distributed/communication/mqtt/mqtt_comm_manager.py
+# index e704f64..a4fe730 100644
+# --- a/fedml_core/distributed/communication/mqtt/mqtt_comm_manager.py
+# +++ b/fedml_core/distributed/communication/mqtt/mqtt_comm_manager.py
+# @@ -6,9 +6,13 @@ from typing import List
+ 
+#  import paho.mqtt.client as mqtt
+ 
+# -from FedML.fedml_core.distributed.communication.base_com_manager import BaseCommunicationManager
+# -from FedML.fedml_core.distributed.communication.message import Message
+# -from FedML.fedml_core.distributed.communication.observer import Observer
+# +# from FedML.fedml_core.distributed.communication.base_com_manager import BaseCommunicationManager
+# +# from FedML.fedml_core.distributed.communication.message import Message
+# +# from FedML.fedml_core.distributed.communication.observer import Observer
+# +from ..base_com_manager import BaseCommunicationManager
+# +from ..message import Message
+# +from ..observer import Observer
+# +
+ 
+ 
+#  class MqttCommManager(BaseCommunicationManager):
+diff --git a/fedml_experiments/distributed/classical_vertical_fl/main_vfl.py b/fedml_experiments/distributed/classical_vertical_fl/main_vfl.py
+index a1dbf82..52c3e6b 100644
+--- a/fedml_experiments/distributed/classical_vertical_fl/main_vfl.py
++++ b/fedml_experiments/distributed/classical_vertical_fl/main_vfl.py
+@@ -102,7 +102,7 @@ if __name__ == "__main__":
+     # load data
+     print("################################ Prepare Data ############################")
+     if args.dataset == "lending_club_loan":
+-        data_dir = "../../../data/lending_club_loan/"
++        data_dir = "../../../data/lending_club_loan/accepted/"
+         train, test = loan_load_three_party_data(data_dir)
+     elif args.dataset == "NUS_WIDE":
+         data_dir = "../../../data/NUS_WIDE"
+diff --git a/fedml_experiments/distributed/classical_vertical_fl/mpi_host_file b/fedml_experiments/distributed/classical_vertical_fl/mpi_host_file
+index 9f3c558..06e421a 100644
+--- a/fedml_experiments/distributed/classical_vertical_fl/mpi_host_file
++++ b/fedml_experiments/distributed/classical_vertical_fl/mpi_host_file
+@@ -1 +1 @@
+-ChaoyangHe-GPU-RTX2080Tix4
+\ No newline at end of file
++aisecure-gpu-2
+diff --git a/fedml_experiments/distributed/fedavg/mpi_host_file b/fedml_experiments/distributed/fedavg/mpi_host_file
+index 71fbc41..06e421a 100644
+--- a/fedml_experiments/distributed/fedavg/mpi_host_file
++++ b/fedml_experiments/distributed/fedavg/mpi_host_file
+@@ -1,2 +1 @@
+-192.168.11.1:6
+-192.168.11.2:5
++aisecure-gpu-2
+diff --git a/fedml_experiments/standalone/classical_vertical_fl/run_vfl_fc_two_party_lending_club.py b/fedml_experiments/standalone/classical_vertical_fl/run_vfl_fc_two_party_lending_club.py
+index 2b071ff..4bc6567 100644
+--- a/fedml_experiments/standalone/classical_vertical_fl/run_vfl_fc_two_party_lending_club.py
++++ b/fedml_experiments/standalone/classical_vertical_fl/run_vfl_fc_two_party_lending_club.py
+@@ -9,7 +9,7 @@ from fedml_api.standalone.classical_vertical_fl.vfl_fixture import FederatedLear
+ from fedml_api.standalone.classical_vertical_fl.party_models import VFLGuestModel, VFLHostModel
+ from fedml_api.model.finance.vfl_models_standalone import LocalModel, DenseModel
+ from fedml_api.standalone.classical_vertical_fl.vfl import VerticalMultiplePartyLogisticRegressionFederatedLearning
+-
++import wandb
+ 
+ def run_experiment(train_data, test_data, batch_size, learning_rate, epoch):
+     print("hyper-parameters:")
+@@ -61,13 +61,18 @@ if __name__ == '__main__':
+     Xa_train, Xb_train, y_train = train
+     Xa_test, Xb_test, y_test = test
+ 
++    wandb.init(
++        project="fedml",
++        name="classical_vertical"
++    )
++
+     batch_size = 256
+-    epoch = 100
++    epoch = 10
+     lr = 0.01
+ 
+     Xa_train, Xb_train, y_train = shuffle(Xa_train, Xb_train, y_train)
+     Xa_test, Xb_test, y_test = shuffle(Xa_test, Xb_test, y_test)
+-    train = [Xa_train, Xb_train, y_train]
++    train = [Xa_train, Xb_train, y_train] 
+     test = [Xa_test, Xb_test, y_test]
+     run_experiment(train_data=train, test_data=test, batch_size=batch_size, learning_rate=lr, epoch=epoch)
+ 
+diff --git a/fedml_experiments/standalone/fedavg/main_fedavg.py b/fedml_experiments/standalone/fedavg/main_fedavg.py
+index 5e410d2..7eeb0be 100644
+--- a/fedml_experiments/standalone/fedavg/main_fedavg.py
++++ b/fedml_experiments/standalone/fedavg/main_fedavg.py
+@@ -7,6 +7,7 @@ import sys
+ import numpy as np
+ import torch
+ import wandb
++import json
+ 
+ sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../../")))
+ 
+@@ -22,19 +23,27 @@ from fedml_api.data_preprocessing.ImageNet.data_loader import load_partition_dat
+ from fedml_api.data_preprocessing.Landmarks.data_loader import load_partition_data_landmarks
+ from fedml_api.model.cv.mobilenet import mobilenet
+ from fedml_api.model.cv.resnet import resnet56
+-from fedml_api.model.cv.cnn import CNN_DropOut
++from fedml_api.model.cv.cnn import CNN_DropOut, CNN_OriginalFedAvg
+ from fedml_api.data_preprocessing.FederatedEMNIST.data_loader import load_partition_data_federated_emnist
+ from fedml_api.model.nlp.rnn import RNN_OriginalFedAvg, RNN_StackOverFlow
+ 
+ from fedml_api.data_preprocessing.MNIST.data_loader import load_partition_data_mnist
+-from fedml_api.model.linear.lr import LogisticRegression
++from fedml_api.data_preprocessing.breast_horizontal.data_loader import load_partition_data_breast_horizontal
++from fedml_api.data_preprocessing.default_credit_horizontal.data_loader import load_partition_data_default_credit_horizontal
++from fedml_api.data_preprocessing.give_credit_horizontal.data_loader import load_partition_data_give_credit_horizontal
++from fedml_api.data_preprocessing.vehicle_scale_horizontal.data_loader import load_partition_data_vehicle_scale_horizontal
++from fedml_api.data_preprocessing.student_horizontal.data_loader import load_partition_data_student_horizontal
++from fedml_api.model.linear.lr import LogisticRegression, LinearRegression
++from fedml_api.model.non_linear.mlp import MLP
+ from fedml_api.model.cv.resnet_gn import resnet18
+ 
+ from fedml_api.standalone.fedavg.fedavg_api import FedAvgAPI
+ from fedml_api.standalone.fedavg.my_model_trainer_classification import MyModelTrainer as MyModelTrainerCLS
++from fedml_api.standalone.fedavg.my_model_trainer_regression import MyModelTrainer as MyModelTrainerRGR
+ from fedml_api.standalone.fedavg.my_model_trainer_nwp import MyModelTrainer as MyModelTrainerNWP
+ from fedml_api.standalone.fedavg.my_model_trainer_tag_prediction import MyModelTrainer as MyModelTrainerTAG
+ 
++config = json.load(open('config.json', 'r'))
+ 
+ def add_args(parser):
+     """
+@@ -42,13 +51,13 @@ def add_args(parser):
+     return a parser added with args required by fit
+     """
+     # Training settings
+-    parser.add_argument('--model', type=str, default='resnet56', metavar='N',
++    parser.add_argument('--model', type=str, default=config["model"], metavar='N',
+                         help='neural network used in training')
+ 
+-    parser.add_argument('--dataset', type=str, default='cifar10', metavar='N',
++    parser.add_argument('--dataset', type=str, default=config["dataset"], metavar='N',
+                         help='dataset used for training')
+ 
+-    parser.add_argument('--data_dir', type=str, default='./../../../data/cifar10',
++    parser.add_argument('--data_dir', type=str, default='./../../../data/'+config["dataset"],
+                         help='data directory')
+ 
+     parser.add_argument('--partition_method', type=str, default='hetero', metavar='N',
+@@ -57,30 +66,30 @@ def add_args(parser):
+     parser.add_argument('--partition_alpha', type=float, default=0.5, metavar='PA',
+                         help='partition alpha (default: 0.5)')
+ 
+-    parser.add_argument('--batch_size', type=int, default=128, metavar='N',
++    parser.add_argument('--batch_size', type=int, default=config["training_param"]["batch_size"], metavar='N',
+                         help='input batch size for training (default: 64)')
+ 
+-    parser.add_argument('--client_optimizer', type=str, default='adam',
++    parser.add_argument('--client_optimizer', type=str, default=config["training_param"]["optimizer"],
+                         help='SGD with momentum; adam')
+ 
+-    parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
++    parser.add_argument('--lr', type=float, default=config["training_param"]["learning_rate"], metavar='LR',
+                         help='learning rate (default: 0.001)')
+ 
+-    parser.add_argument('--wd', help='weight decay parameter;', type=float, default=0.001)
++    parser.add_argument('--wd', help='weight decay parameter;', type=float, default=config["training_param"]["optimizer_param"]["weight_decay"])
+ 
+-    parser.add_argument('--epochs', type=int, default=5, metavar='EP',
++    parser.add_argument('--epochs', type=int, default=config["training_param"]["inner_step"], metavar='EP',
+                         help='how many epochs will be trained locally')
+ 
+-    parser.add_argument('--client_num_in_total', type=int, default=10, metavar='NN',
++    parser.add_argument('--client_num_in_total', type=int, default=config["training_param"]["tot_client_num"], metavar='NN',
+                         help='number of workers in a distributed cluster')
+ 
+-    parser.add_argument('--client_num_per_round', type=int, default=10, metavar='NN',
++    parser.add_argument('--client_num_per_round', type=int, default=config["training_param"]["client_per_round"], metavar='NN',
+                         help='number of workers')
+ 
+-    parser.add_argument('--comm_round', type=int, default=10,
++    parser.add_argument('--comm_round', type=int, default=config["training_param"]["epochs"],
+                         help='how many round of communications we shoud use')
+ 
+-    parser.add_argument('--frequency_of_the_test', type=int, default=5,
++    parser.add_argument('--frequency_of_the_test', type=int, default=1,
+                         help='the frequency of the algorithms')
+ 
+     parser.add_argument('--gpu', type=int, default=0,
+@@ -114,11 +123,47 @@ def load_data(args, dataset_name):
+         """
+         args.client_num_in_total = client_num
+ 
++    elif dataset_name == "breast_horizontal":
++        logging.info("load_data. dataset_name = %s" % dataset_name)
++        client_num, train_data_num, test_data_num, train_data_global, test_data_global, \
++        train_data_local_num_dict, train_data_local_dict, test_data_local_dict, \
++        class_num = load_partition_data_breast_horizontal(args.batch_size)
++        args.client_num_in_total = client_num
++    
++    elif dataset_name == "default_credit_horizontal":
++        logging.info("load_data. dataset_name = %s" % dataset_name)
++        client_num, train_data_num, test_data_num, train_data_global, test_data_global, \
++        train_data_local_num_dict, train_data_local_dict, test_data_local_dict, \
++        class_num = load_partition_data_default_credit_horizontal(args.batch_size)
++        args.client_num_in_total = client_num
++
++    elif dataset_name == "give_credit_horizontal":
++        logging.info("load_data. dataset_name = %s" % dataset_name)
++        client_num, train_data_num, test_data_num, train_data_global, test_data_global, \
++        train_data_local_num_dict, train_data_local_dict, test_data_local_dict, \
++        class_num = load_partition_data_give_credit_horizontal(args.batch_size)
++        args.client_num_in_total = client_num
++
++    elif dataset_name == "vehicle_scale_horizontal":
++        logging.info("load_data. dataset_name = %s" % dataset_name)
++        client_num, train_data_num, test_data_num, train_data_global, test_data_global, \
++        train_data_local_num_dict, train_data_local_dict, test_data_local_dict, \
++        class_num = load_partition_data_vehicle_scale_horizontal(args.batch_size)
++        args.client_num_in_total = client_num
++
++    elif dataset_name == "student_horizontal":
++        logging.info("load_data. dataset_name = %s" % dataset_name)
++        client_num, train_data_num, test_data_num, train_data_global, test_data_global, \
++        train_data_local_num_dict, train_data_local_dict, test_data_local_dict, \
++        class_num = load_partition_data_student_horizontal(args.batch_size)
++        args.client_num_in_total = client_num
++        
+     elif dataset_name == "femnist":
+         logging.info("load_data. dataset_name = %s" % dataset_name)
+         client_num, train_data_num, test_data_num, train_data_global, test_data_global, \
+         train_data_local_num_dict, train_data_local_dict, test_data_local_dict, \
+         class_num = load_partition_data_federated_emnist(args.dataset, args.data_dir)
++        print('CLASS NUM = ',class_num)
+         args.client_num_in_total = client_num
+ 
+     elif dataset_name == "shakespeare":
+@@ -238,12 +283,42 @@ def combine_batches(batches):
+ def create_model(args, model_name, output_dim):
+     logging.info("create_model. model_name = %s, output_dim = %s" % (model_name, output_dim))
+     model = None
+-    if model_name == "lr" and args.dataset == "mnist":
++    if model_name == "logistic_regression" and args.dataset == "mnist":
+         logging.info("LogisticRegression + MNIST")
+         model = LogisticRegression(28 * 28, output_dim)
++    elif model_name == "mlp" and args.dataset == 'mnist':
++        logging.info("HiddenNetwork + mnist")
++        model = MLP(28 * 28, output_dim, config["model_param"]["hidden"])
++    elif model_name == "logistic_regression" and args.dataset == 'breast_horizontal':
++        logging.info("LogisticRegression + breast_horizontal")
++        model = LogisticRegression(30, output_dim)
++    elif model_name == "logistic_regression" and args.dataset == 'default_credit_horizontal':
++        logging.info("LogisticRegression + default_credit_horizontal")
++        model = LogisticRegression(23, output_dim)
++    elif model_name == "mlp" and args.dataset == 'default_credit_horizontal':
++        logging.info("MLP + default_credit_horizontal")
++        model = MLP(23, output_dim, config["model_param"]["hidden"])
++    elif model_name == "logistic_regression" and args.dataset == 'give_credit_horizontal':
++        logging.info("LogisticRegression + give_credit_horizontal")
++        model = LogisticRegression(10, output_dim)
++    elif model_name == "logistic_regression" and args.dataset == 'vehicle_scale_horizontal':
++        logging.info("LogisticRegression + vehicle_scale_horizontal")
++        model = LogisticRegression(18, output_dim)
++    elif model_name == "hn" and args.dataset == 'default_credit_horizontal':
++        logging.info("HiddenNetwork + default_credit_horizontal")
++        model = HiddenNetwork(23, output_dim, 8)
++    elif model_name == "hn" and args.dataset == 'vehicle_scale_horizontal':
++        logging.info("HiddenNetwork + vehicle_scale_horizontal")
++        model = HiddenNetwork(18, output_dim, 8)
++    elif model_name == 'linear_regression' and args.dataset == 'student_horizontal':
++        logging.info("LinearRegression + student_horizontal")
++        model = LinearRegression(13, 1)
+     elif model_name == "cnn" and args.dataset == "femnist":
+         logging.info("CNN + FederatedEMNIST")
+         model = CNN_DropOut(False)
++    elif model_name == "cnn_o" and args.dataset == "femnist":
++        logging.info("CNN_ORIGINAL + FederatedEMNIST")
++        model = CNN_OriginalFedAvg(False)
+     elif model_name == "resnet18_gn" and args.dataset == "fed_cifar100":
+         logging.info("ResNet18_GN + Federated_CIFAR100")
+         model = resnet18()
+@@ -253,8 +328,8 @@ def create_model(args, model_name, output_dim):
+     elif model_name == "rnn" and args.dataset == "fed_shakespeare":
+         logging.info("RNN + fed_shakespeare")
+         model = RNN_OriginalFedAvg()
+-    elif model_name == "lr" and args.dataset == "stackoverflow_lr":
+-        logging.info("lr + stackoverflow_lr")
++    elif model_name == "logistic_regression" and args.dataset == "stackoverflow_logistic_regression":
++        logging.info("logistic_regression + stackoverflow_logistic_regression")
+         model = LogisticRegression(10000, output_dim)
+     elif model_name == "rnn" and args.dataset == "stackoverflow_nwp":
+         logging.info("RNN + stackoverflow_nwp")
+@@ -267,10 +342,12 @@ def create_model(args, model_name, output_dim):
+ 
+ 
+ def custom_model_trainer(args, model):
+-    if args.dataset == "stackoverflow_lr":
++    if args.dataset == "stackoverflow_logistic_regression":
+         return MyModelTrainerTAG(model)
+     elif args.dataset in ["fed_shakespeare", "stackoverflow_nwp"]:
+         return MyModelTrainerNWP(model)
++    elif args.dataset in ['student_horizontal']:
++        return MyModelTrainerRGR(model)
+     else: # default model trainer is for classification problem
+         return MyModelTrainerCLS(model)
+ 
+@@ -286,11 +363,11 @@ if __name__ == "__main__":
+     device = torch.device("cuda:" + str(args.gpu) if torch.cuda.is_available() else "cpu")
+     logger.info(device)
+ 
+-    wandb.init(
+-        project="fedml",
+-        name="FedAVG-r" + str(args.comm_round) + "-e" + str(args.epochs) + "-lr" + str(args.lr),
+-        config=args
+-    )
++    # wandb.init(
++    #     project="fedml-docker",
++    #     name="FedAVG-r" + str(args.comm_round) + "-e" + str(args.epochs) + "-lr" + str(args.lr),
++    #     config=args
++    # )
+ 
+     # Set the random seed. The np.random seed determines the dataset partition.
+     # The torch_manual_seed determines the initial weight.
+@@ -311,5 +388,9 @@ if __name__ == "__main__":
+     model_trainer = custom_model_trainer(args, model)
+     logging.info(model)
+ 
+-    fedavgAPI = FedAvgAPI(dataset, device, args, model_trainer)
++    fedavgAPI = FedAvgAPI(dataset, device, args, model_trainer, is_regression = (args.dataset == 'student_horizontal'))
+     fedavgAPI.train()
++
++
++# To complete regression , please see 'https://github.com/FedML-AI/FedML/blob/master/fedml_api/standalone/fedavg/my_model_trainer_classification.py' for more details
++# And update the 'custom_model_trainer()' in this file
+\ No newline at end of file

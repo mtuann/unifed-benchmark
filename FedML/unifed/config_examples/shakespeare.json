@@ -1,0 +1,23 @@
+{
+    "framework": "fedml",
+    "dataset": "shakespeare",
+    "algorithm": "fed_avg",
+    "model": "rnn",
+    "bench_param": {
+        "mode": "local",
+        "device": "gpu"
+    },
+    "training_param": {
+        "epochs": 100,
+        "batch_size": 10,
+        "inner_step": 3,
+        "client_per_round": 10,
+        "tot_client_num": 10,
+        "learning_rate": 0.008,
+        "loss_func": "cross_entropy",
+        "optimizer": "adam",
+        "optimizer_param": {
+            "weight_decay": 0
+        }
+    }
+}
