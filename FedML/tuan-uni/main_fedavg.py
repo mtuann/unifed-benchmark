@@ -9,7 +9,6 @@ import torch
 import json
 
 
-
 from wrap.data.breast_horizontal.data_loader import load_partition_data_breast_horizontal
 from wrap.data.default_credit_horizontal.data_loader import load_partition_data_default_credit_horizontal
 from wrap.data.our_femnist.data_loader import load_partition_data_femnist
@@ -33,62 +32,19 @@ from fedml.data.shakespeare.data_loader import load_partition_data_shakespeare
 
 from wrap.model.non_linear.mlp import MLP
 from wrap.model.cv.lenet import lenet
-# from fedml.model.cv.alexnet import AlexNet
-
 from wrap.model.linear.lr import LinearRegression
 
-# from fedml.model.linear.lr import LinearRegression
 from fedml.model.linear.lr import LogisticRegression
-
 from fedml.model.cv.resnet import resnet56
 from fedml.model.cv.resnet_gn import resnet18
 from fedml.model.nlp.rnn import RNN_StackOverFlow
 from fedml.model.cv.mobilenet import mobilenet
 from fedml.model.cv.cnn import CNN_DropOut, CNN_OriginalFedAvg
-from fedml.model.nlp.rnn import RNN_OriginalFedAvg                                                                                                   
-from fedml.simulation.sp.fedavg import FedAvgAPI
+from fedml.model.nlp.rnn import RNN_OriginalFedAvg
+from wrap.standalone.fedavg_api import FedAvgAPI                                                                                             
+# from fedml.simulation.sp.fedavg import FedAvgAPI
 
-
-# from fedml_api.data_preprocessing.cifar10.data_loader import load_partition_data_cifar10
-# from fedml_api.data_preprocessing.cifar100.data_loader import load_partition_data_cifar100
-# from fedml_api.data_preprocessing.cinic10.data_loader import load_partition_data_cinic10
-# from fedml_api.data_preprocessing.fed_cifar100.data_loader import load_partition_data_federated_cifar100
-# from fedml_api.data_preprocessing.shakespeare.data_loader import load_partition_data_shakespeare
-# from fedml_api.data_preprocessing.fed_shakespeare.data_loader import load_partition_data_federated_shakespeare
-# from fedml_api.data_preprocessing.stackoverflow_lr.data_loader import load_partition_data_federated_stackoverflow_lr
-# from fedml_api.data_preprocessing.stackoverflow_nwp.data_loader import load_partition_data_federated_stackoverflow_nwp
-# from fedml_api.data_preprocessing.ImageNet.data_loader import load_partition_data_ImageNet
-# from fedml_api.data_preprocessing.Landmarks.data_loader import load_partition_data_landmarks
-
-# from fedml_api.model.cv.mobilenet import mobilenet
-# from fedml_api.model.cv.resnet import resnet56
-# from fedml_api.model.cv.cnn import CNN_DropOut, CNN_OriginalFedAvg
-# from fedml_api.model.cv.lenet import lenet
-# from fedml_api.model.cv.alexnet import AlexNet
-# from fedml_api.data_preprocessing.FederatedEMNIST.data_loader import load_partition_data_federated_emnist
-# from fedml_api.model.nlp.rnn import RNN_OriginalFedAvg, RNN_StackOverFlow
-
-# from fedml_api.data_preprocessing.MNIST.data_loader import load_partition_data_mnist
-# from fedml_api.data_preprocessing.breast_horizontal.data_loader import load_partition_data_breast_horizontal
-# from fedml_api.data_preprocessing.default_credit_horizontal.data_loader import load_partition_data_default_credit_horizontal
-# from fedml_api.data_preprocessing.give_credit_horizontal.data_loader import load_partition_data_give_credit_horizontal
-# from fedml_api.data_preprocessing.vehicle_scale_horizontal.data_loader import load_partition_data_vehicle_scale_horizontal
-# from fedml_api.data_preprocessing.student_horizontal.data_loader import load_partition_data_student_horizontal
-# from fedml_api.model.linear.lr import LogisticRegression, LinearRegression
-# from fedml_api.model.non_linear.mlp import MLP
-# from fedml_api.model.cv.resnet_gn import resnet18
-
-# from fedml_api.standalone.fedavg.fedavg_api import FedAvgAPI
-# from fedml_api.standalone.fedavg.my_model_trainer_classification import MyModelTrainer as MyModelTrainerCLS
-# from fedml_api.standalone.fedavg.my_model_trainer_regression import MyModelTrainer as MyModelTrainerRGR
-# from fedml_api.standalone.fedavg.my_model_trainer_nwp import MyModelTrainer as MyModelTrainerNWP
-# from fedml_api.standalone.fedavg.my_model_trainer_tag_prediction import MyModelTrainer as MyModelTrainerTAG
-
-# from wrap.data.our_femnist.data_loader import load_partition_data_femnist
-# from wrap.data.our_reddit.data_loader import load_partition_data_reddit
-# from wrap.data.our_celeba.data_loader import load_partition_data_celeba
-
-config = json.load(open('femnist.json', 'r'))
+config = json.load(open('config.json', 'r'))
 
 def add_args(parser):
     """
@@ -454,21 +410,6 @@ def create_model(args, model_name, output_dim):
     # print(model)
     return model
 
-from fedml.ml.trainer.my_model_trainer_classification import ModelTrainerCLS as MyModelTrainerCLS
-from fedml.ml.trainer.my_model_trainer_nwp import ModelTrainerNWP as MyModelTrainerNWP
-from fedml.ml.trainer.my_model_trainer_tag_prediction import ModelTrainerTAGPred as MyModelTrainerTAG
-from wrap.trainer.my_model_trainer_regression import MyModelTrainerRGR as MyModelTrainerRGR
-
-def custom_model_trainer(model, args):
-    if args.dataset == "stackoverflow_logistic_regression":
-        return MyModelTrainerTAG(model, args)
-    elif args.dataset in ["fed_shakespeare", "stackoverflow_nwp", "reddit"]:
-        return MyModelTrainerNWP(model, args)
-    elif args.dataset in ['student_horizontal']:
-        return MyModelTrainerRGR(model, args)
-    else: # default model trainer is for classification problem
-        return MyModelTrainerCLS(model, args)
-
 if __name__ == "__main__":
     logging.basicConfig()
     logger = logging.getLogger()
@@ -480,16 +421,19 @@ if __name__ == "__main__":
     device = torch.device("cuda:" + str(args.gpu) if torch.cuda.is_available() else "cpu")
     logger.info(device)
 
+    # import IPython
+    # IPython.embed()
+    # exit(0)
+    
     dataset = load_data(args, args.dataset)
 
     model = create_model(args, model_name=args.model, output_dim=dataset[7])
-    
-    model_trainer = custom_model_trainer(model, args).model
-    
     logging.info(model)
-
-    # fedavgAPI = FedAvgAPI(dataset, device, args, model_trainer, is_regression = (args.dataset == 'student_horizontal'))
-    fedavgAPI = FedAvgAPI(args, device, dataset, model_trainer)
-    
-    
+    fedavgAPI = FedAvgAPI(args, device, dataset, model, is_regression = (args.dataset == 'student_horizontal'))
     fedavgAPI.train()
+
+    # cmd_change_log = 'mv ./log ./log-{}-{}-{}'.format(args.dataset, args.training_param['tot_client_num'], args.training_param['client_per_round'])
+    cmd_change_log = f'mv ./log ./log-{args.dataset}-{args.client_num_in_total}-{args.client_num_per_round}'
+    
+    os.system(cmd_change_log)
+    

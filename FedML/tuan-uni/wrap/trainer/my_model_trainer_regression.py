@@ -2,23 +2,22 @@ import torch
 from torch import nn
 
 from fedml.core.alg_frame.client_trainer import ClientTrainer
-import logging
+# import logging
 
 
-class MyModelTrainerRGR(ClientTrainer):
+class ModelTrainerRGR(ClientTrainer):
     def get_model_params(self):
         return self.model.cpu().state_dict()
 
     def set_model_params(self, model_parameters):
         self.model.load_state_dict(model_parameters)
 
-    def train(self, train_data, device, args):
+    def train(self, train_data, device, args, logger):
         model = self.model
 
         model.to(device)
         model.train()
 
-        # train and update
         # train and update
         criterion = nn.MSELoss().to(device)
         optim_param = args.optim_param
@@ -30,22 +29,22 @@ class MyModelTrainerRGR(ClientTrainer):
 
         epoch_loss = []
         for epoch in range(args.epochs):
-            # with logger.computation() as c:
-            batch_loss, tot_sample = [], 0
-            for batch_idx, (x, labels) in enumerate(train_data):
-                x, labels = x.to(device), labels.to(device)
-                model.zero_grad()
-                log_probs = model(x).reshape(-1)
-                loss = criterion(log_probs, labels)
-                loss.backward()
+            with logger.computation() as c:
+                batch_loss, tot_sample = [], 0
+                for batch_idx, (x, labels) in enumerate(train_data):
+                    x, labels = x.to(device), labels.to(device)
+                    model.zero_grad()
+                    log_probs = model(x).reshape(-1)
+                    loss = criterion(log_probs, labels)
+                    loss.backward()
 
-                optimizer.step()
-                batch_loss.append(loss.item() * x.shape[0])
-                tot_sample += x.shape[0]
-            epoch_loss.append(sum(batch_loss) / tot_sample)
-            logging.info('Client Index = {}\tEpoch: {}\tLoss: {:.6f}'.format(
-                self.id, epoch, sum(epoch_loss) / len(epoch_loss)))
-                # c.report_metric('loss',epoch_loss[-1] )
+                    optimizer.step()
+                    batch_loss.append(loss.item() * x.shape[0])
+                    tot_sample += x.shape[0]
+                epoch_loss.append(sum(batch_loss) / tot_sample)
+                # logging.info('Client Index = {}\tEpoch: {}\tLoss: {:.6f}'.format(
+                #     self.id, epoch, sum(epoch_loss) / len(epoch_loss)))
+                c.report_metric('loss',epoch_loss[-1] )
 
     def test(self, test_data, device, args):
         model = self.model

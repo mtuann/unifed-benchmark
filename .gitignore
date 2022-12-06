@@ -4,6 +4,8 @@ FedML/FedML
 FLBenchmark-toolkit/
 FedML/*data*
 FedML/tuan-uni/data/
+FedML/tuan-uni/log*
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

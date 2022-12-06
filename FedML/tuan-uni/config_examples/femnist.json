@@ -1,0 +1,26 @@
+{
+    "framework": "fedml",
+    "dataset": "femnist",
+    "algorithm": "fedavg",
+    "model": "lenet",
+    "bench_param": {
+        "mode": "local",
+        "device": "cpu"
+    },
+    "training_param": {
+        "epochs": 300,
+        "batch_size": 4,
+        "learning_rate": 0.003,
+        "loss_func": "cross_entropy",
+        "optimizer": "sgd",
+        "inner_step": 5,
+        "tot_client_num": 197,
+        "client_per_round": 20,
+        "optimizer_param": {
+            "momentum": 0.9,
+            "dampening": 0,
+            "weight_decay": 0,
+            "nesterov": false
+        }
+    }
+}

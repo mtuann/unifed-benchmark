@@ -1,0 +1,23 @@
+{
+    "framework": "fedml",
+    "dataset": "student_horizontal",
+    "algorithm": "fed_avg",
+    "model": "linear_regression",
+    "bench_param": {
+        "mode": "local",
+        "device": "gpu"
+    },
+    "training_param": {
+        "epochs": 40,
+        "batch_size": 32,
+        "inner_step": 5,
+        "client_per_round": 2,
+        "tot_client_num": 2,
+        "learning_rate": 0.001,
+        "loss_func": "mse",
+        "optimizer": "sgd",
+        "optimizer_param": {
+            "weight_decay": 0
+        }
+    }
+}

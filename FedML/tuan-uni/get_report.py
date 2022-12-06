@@ -1,2 +1,2 @@
 import flbenchmark.logging
-flbenchmark.logging.get_report('./log')
+flbenchmark.logging.get_report('./log-cifar10')

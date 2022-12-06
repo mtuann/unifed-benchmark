@@ -1,21 +1,20 @@
 {
     "framework": "fedml",
-    "dataset": "cifar10",
+    "dataset": "reddit",
     "algorithm": "fedavg",
-    "model": "resnet56",
+    "model": "lstm",
     "bench_param": {
         "mode": "local",
-        "device": "gpu"
+        "device": "cpu"
     },
     "training_param": {
-        "epochs": 3,
-        "batch_size": 256,
-        "inner_step": 1,
-        "tot_client_num": 5,
-        "client_per_round": 3,
-        "learning_rate": 0.01,
+        "epochs": 1000,
+        "batch_size": 32,
+        "learning_rate": 0.3,
         "loss_func": "cross_entropy",
         "optimizer": "sgd",
+        "inner_step": 1,
+        "client_per_round": 10,
         "optimizer_param": {
             "momentum": 0.9,
             "dampening": 0,
